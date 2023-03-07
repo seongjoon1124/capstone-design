@@ -1,0 +1,109 @@
+//아래는 라즈베리파이에서 시리얼 통신으로 전송한 문자열에 따라 아두이노에서 DC모터를 제어하는 코드입니다. 시리얼 통신으로 전송되는 문자열은 "F", "B", "L", "R" 로 각각 전진, 후진, 좌회전, 우회전을 의미합니다.
+
+
+int RightMotor_E_pin = 5;      // 오른쪽 모터의 Enable & PWM
+int LeftMotor_E_pin = 6;       // 왼쪽 모터의 Enable & PWM
+int RightMotor_1_pin = 8;      // 오른쪽 모터 제어선 IN1
+int RightMotor_2_pin = 9;      // 오른쪽 모터 제어선 IN2
+int LeftMotor_3_pin = 10;      // 왼쪽 모터 제어선 IN3
+int LeftMotor_4_pin = 11;      // 왼쪽 모터 제어선 IN4
+
+int motor_s  = 153;          // 최대 속도(0~255)의 60%
+int R_Motor = 0;
+int L_Motor = 0;
+int mode = 0;
+
+void setup() {
+  pinMode(RightMotor_E_pin, OUTPUT);       // 출력모드로 설정
+  pinMode(RightMotor_1_pin, OUTPUT);
+  pinMode(RightMotor_2_pin, OUTPUT);
+  pinMode(LeftMotor_3_pin, OUTPUT);
+  pinMode(LeftMotor_4_pin, OUTPUT);
+  pinMode(LeftMotor_E_pin, OUTPUT);
+
+  Serial.begin(9600);    // 시리얼 통신 속도 설정                   
+}
+
+void loop() {
+  if(Serial.available() > 0){  // 시리얼 버퍼에 값이 들어오면
+    char val = Serial.read();   // 값을 읽어서 변수에 저장
+    
+    if(mode == 0){  
+      motor_role(R_Motor, L_Motor, motor_s);  //
+    }
+    else if(mode == 1){
+      Right_role(R_Motor, L_Motor, motor_s);
+    }
+    else if(mode == 2){
+      Left_role(R_Motor, L_Motor, motor_s);
+    }
+    else{
+      motor_role(R_Motor, L_Motor, 0);
+    }   
+  }
+}
+
+void control_SmartCar(char val){   //
+  if(val == 'F'){  // 명령 : 전진
+    R_Motor = HIGH;
+    L_Motor = HIGH;
+    mode = 0;
+    Serial.print("Forward : ");
+  }  
+  
+  else if(val == 'L'){ // 명령 : 좌회전
+    mode = 2;
+    Serial.print("Turn Left : "); 
+  }
+  
+  else if(val == 'R'){ // 명령 : 우회전
+    mode = 1;
+    Serial.print("Turn Right : "); 
+  }
+  
+  else if(val == 'B'){ // 명령 : 후진
+    R_Motor = LOW;
+    L_Motor = LOW;
+    mode = 0;
+    Serial.print("Backward : "); 
+  }
+  
+  else{
+    Serial.print("Not Defined : ");  // 지정하지 않은 주소입력.
+  }
+  
+  Serial.print("R_Motor[ ");Serial.print(R_Motor);Serial.print(" ], ");  //시리얼값을 모니터로 
+  Serial.print("L_Motor[ ");Serial.print(L_Motor);Serial.print(" ], ");
+  Serial.print("motor_s[ ");Serial.print(motor_s);Serial.print(" ], ");
+  Serial.print("Mode[ ");Serial.print(mode);Serial.println(" ]");
+}
+
+void motor_role(int R_motor, int L_motor, int Speed){  //전진,후진 함수
+   digitalWrite(RightMotor_1_pin, R_motor);
+   digitalWrite(RightMotor_2_pin, !R_motor);
+   digitalWrite(LeftMotor_3_pin, L_motor);
+   digitalWrite(LeftMotor_4_pin, !L_motor);
+   
+   analogWrite(RightMotor_E_pin, Speed);  // 우측 모터 속도값
+   analogWrite(LeftMotor_E_pin, Speed);   // 좌측 모터 속도값  
+}
+
+void Right_role(int R_motor, int L_motor, int Speed){  // 우회전 함수
+   digitalWrite(RightMotor_1_pin, R_motor);
+   digitalWrite(RightMotor_2_pin, !R_motor);
+   digitalWrite(LeftMotor_3_pin, L_motor);
+   digitalWrite(LeftMotor_4_pin, !L_motor);
+   
+   analogWrite(RightMotor_E_pin, max(Speed*0.4,50));  // 우측 모터 속도값
+   analogWrite(LeftMotor_E_pin, min(Speed*1.4,255));   // 좌측 모터 속도값
+}
+
+void Left_role(int R_motor, int L_motor, int Speed){  //좌회전 함수
+   digitalWrite(RightMotor_1_pin, R_motor);
+   digitalWrite(RightMotor_2_pin, !R_motor);
+   digitalWrite(LeftMotor_3_pin, L_motor);
+   digitalWrite(LeftMotor_4_pin, !L_motor);
+   
+   analogWrite(RightMotor_E_pin, min(Speed*1.4,255));  // 우측 모터 속도값
+   analogWrite(LeftMotor_E_pin, max(Speed*0.2,50));   // 좌측 모터 속도값   
+}
