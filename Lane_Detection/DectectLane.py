@@ -3,8 +3,8 @@ import numpy as np
 import sys
 import time
 import math
-from bluetooth import *
-import raspi2arduino_bluetooth as rb
+import dcmotor as motor
+
 
 
 #차선인식 함수(영상을 흑백전환, canny, houghLine 과정을 거쳐 변환)
@@ -35,9 +35,9 @@ def DetectLane(frame):
                 temp = line2[i][0], line2[i][1]
                 line2[i][0], line2[i][1] = line2[i][2], line2[i][3]
                 line2[i][2] , line2[i][3] = temp
-            if line2[i][0] < 320 and (abs(line2[i][4]) < 170 and abs(line2[i][4]) < 95):
+            if line2[i][0] < 320 and (abs(line2[i][4]) < 170 and abs(line2[i][4]) > 95):
                 line_Left = np.append(line_Left, line2[i])
-            elif line2[i][0] > 320 and (abs(line2[i][4]) < 170 and abs(line2[i][4]) < 95):
+            elif line2[i][0] > 320 and (abs(line2[i][4]) < 170 and abs(line2[i][4]) > 95):
                 line_Right = np.append(line_Right, line2[i])     
     line_Left = line_Left.reshape(int(len(line_Left) / 5), 5)
     line_Right = line_Right.reshape(int(len(line_Right) / 5), 5)
@@ -61,9 +61,11 @@ def DetectLane(frame):
     mimg = cv2.addWeighted(frame, 1, mask_canny, 1, 0)  #카메라 영상에 가중치 부여하여 선명도 높임
     return mimg, degree_Left, degree_Right  #return 값으로 영상, 좌,우 인식한 차선에 선 생성
 
-cap = cv2.VideoCapture(-1)  #카메라 송출 시작
+cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)  #카메라 송출 시작
+print("1")
 
 while cap.isOpened():
+    print("1")
     ret, frame = cap.read()
     if ret:
         frame = cv2.resize(frame, (640,360))
@@ -73,29 +75,29 @@ while cap.isOpened():
         if abs(left) <= 155 or abs(right) <= 155:   #절댓값으로 카메라의 왼쪽, 오른쪽에서의 차선을 생성하기 위함
             if left == 0 or right == 0:
                 if left < 0 or right < 0:
-                    rb.client_socket.send("1")  #아두이노에게 1이란 값을 전송하여 모터가 좌회전 하게끔 코딩
+                    motor.TurnLeft()
                     print('left')
                 elif left > 0 or right > 0:
-                    rb.client_socket.send("2")  #아두이노에게 2란 값 전송하여 모터 우회전 하게끔 코딩
+                    motor.TurnRight()
                     print('right')
             elif abs(left - 15) > abs(right):
-                rb.client_socket.send("1")
-                print('left')
-            elif abs(right + 15) > abs(left):
-                rb.client_socket.send("2")
+                motor.TurnRight()
                 print('right')
+            elif abs(right + 15) > abs(left):
+                motor.TurnLeft()
+                print('left')
             else:
-                rb.client_socket.send("3")  #직진
+                motor.Forward(30)
                 print('go')
                 
         #만약 카메라에 인식된 차선에 비해 모터가 덜 꺾일때 가정하여 핸들을 더 왼쪽으로 꺾어 죄회전 하는 상황
         #작동시켰을 때 필요 없으면 지워도 상관 없음
         else:
             if left > 155 or right > 155:
-                rb.client_socket.send("4")
+                motor.TurnHardRight
                 print('more left')
             elif left < -155 or right < -155:
-                rb.client_socket.send("5")
+                motor.TurnHardLeft
                 print('more right')
 
         key = cv2.waitKey(1)
