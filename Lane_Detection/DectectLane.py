@@ -4,7 +4,7 @@ import sys
 import time
 import math
 import dcmotor as motor
-
+import ultrasonic as us
 
 
 #차선인식 함수(영상을 흑백전환, canny, houghLine 과정을 거쳐 변환)
@@ -65,46 +65,52 @@ cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)  #카메라 송출 시작
 print("1")
 
 while cap.isOpened():
-    print("1")
     ret, frame = cap.read()
+    frame = cv2.flip(frame, -1)
+    dist = us.distance()
     if ret:
         frame = cv2.resize(frame, (640,360))
         cv2.imshow('ImageWindow', DetectLane(frame)[0])
         left, right = DetectLane(frame)[1], DetectLane(frame)[2]    #왼쪽, 오른쪽 차선의 객체 생성
 
-        if abs(left) <= 155 or abs(right) <= 155:   #절댓값으로 카메라의 왼쪽, 오른쪽에서의 차선을 생성하기 위함
-            if left == 0 or right == 0:
-                if left < 0 or right < 0:
-                    motor.TurnLeft()
-                    print('left')
-                elif left > 0 or right > 0:
+        if dist > 7:
+            print("dist = %.1f" % dist)
+            if abs(left) <= 155 or abs(right) <= 155:   #절댓값으로 카메라의 왼쪽, 오른쪽에서의 차선을 생성하기 위함
+                if left == 0 or right == 0:
+                    if left < 0 or right < 0:
+                        motor.TurnLeft()
+                        print('left')
+                    elif left > 0 or right > 0:
+                        motor.TurnRight()
+                        print('right')
+                elif abs(left - 15) > abs(right):
                     motor.TurnRight()
                     print('right')
-            elif abs(left - 15) > abs(right):
-                motor.TurnRight()
-                print('right')
-            elif abs(right + 15) > abs(left):
-                motor.TurnLeft()
-                print('left')
+                elif abs(right + 15) > abs(left):
+                    motor.TurnLeft()
+                    print('left')
+                else:
+                    motor.Forward(30)
+                    print('go')
+            #만약 카메라에 인식된 차선에 비해 모터가 덜 꺾일때 가정하여 핸들을 더 왼쪽으로 꺾어 죄회전 하는 상황
+            #작동시켰을 때 필요 없으면 지워도 상관 없음
             else:
-                motor.Forward(30)
-                print('go')
-                
-        #만약 카메라에 인식된 차선에 비해 모터가 덜 꺾일때 가정하여 핸들을 더 왼쪽으로 꺾어 죄회전 하는 상황
-        #작동시켰을 때 필요 없으면 지워도 상관 없음
-        else:
-            if left > 155 or right > 155:
-                motor.TurnHardRight
-                print('more left')
-            elif left < -155 or right < -155:
-                motor.TurnHardLeft
-                print('more right')
+                if left > 155 or right > 155:
+                    motor.TurnHardRight
+                    print('more left')
+                elif left < -155 or right < -155:
+                    motor.TurnHardLeft
+                    print('more right')
+
+        elif dist <= 7:
+            motor.Stop()
+            print("dist = %.1f" % dist)
 
         key = cv2.waitKey(1)
         if key & 0xFF == ord('q'):
             break
             cv2.destroyAllWindows()
-
-
-#이제부터 위 1,2,3,4 값에 맞는 모터를 아두이노에서 구현
-#초음파로 장애물 피하는 것도 값 만들어서 아두이노로 보내서 제어
+            motor.pwm1.stop()
+            motor.pwm2.stop()
+            motor.GPIO.cleanup()
+            sys.exit()

@@ -51,8 +51,8 @@ def Forward(speed):
     GPIO.output(DCpin4, HIGH)
 
 def Back(speed):
-    pwm1.ChangeDutyCycle(speed)
-    pwm2.ChangeDutyCycle(speed)
+    pwm1.ChangeDutyCycle(12)
+    pwm2.ChangeDutyCycle(12)
     GPIO.output(DCpin1, LOW)
     GPIO.output(DCpin2, HIGH)
     GPIO.output(DCpin3, HIGH)
@@ -68,32 +68,32 @@ def Stop():
 
 #좌회전, 우회전 코딩 해야됨
 def TurnLeft():
-    pwm1.ChangeDutyCycle(30)
-    pwm2.ChangeDutyCycle(20)
+    pwm1.ChangeDutyCycle(36)
+    pwm2.ChangeDutyCycle(7)
     GPIO.output(DCpin1, HIGH)   
     GPIO.output(DCpin2, LOW)
     GPIO.output(DCpin3, LOW)
     GPIO.output(DCpin4, HIGH)
     
 def TurnRight():
-    pwm1.ChangeDutyCycle(20)
-    pwm2.ChangeDutyCycle(30)
+    pwm1.ChangeDutyCycle(7)
+    pwm2.ChangeDutyCycle(36)
     GPIO.output(DCpin1, HIGH)   
     GPIO.output(DCpin2, LOW)
     GPIO.output(DCpin3, LOW)
     GPIO.output(DCpin4, HIGH)
 
 def TurnHardLeft():
-    pwm1.ChangeDutyCycle(20)
-    pwm2.ChangeDutyCycle(35)
+    pwm1.ChangeDutyCycle(65)
+    pwm2.ChangeDutyCycle(5)
     GPIO.output(DCpin1, HIGH)   
     GPIO.output(DCpin2, LOW)
     GPIO.output(DCpin3, LOW)
     GPIO.output(DCpin4, HIGH)
 
 def TurnHardRight():
-    pwm1.ChangeDutyCycle(35)
-    pwm2.ChangeDutyCycle(20)
+    pwm1.ChangeDutyCycle(5)
+    pwm2.ChangeDutyCycle(65)
     GPIO.output(DCpin1, HIGH)   
     GPIO.output(DCpin2, LOW)
     GPIO.output(DCpin3, LOW)
@@ -112,13 +112,3 @@ def TurnHardRight():
 #         GPIO.cleanup()
 #         sys.exit()
 
-
-
-while(1):
-    TurnLeft()
-
-Stop()
-
-pwm1.stop()
-pwm2.stop()
-GPIO.cleanup()

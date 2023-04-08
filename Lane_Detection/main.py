@@ -6,14 +6,13 @@ import math
 import test
 
 
-#카메라 테스트
-# cap = cv2.VideoCapture(-1)
-# cap.set(3,320)
-# cap.set(4,240)
+cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)
+cap.set(3,640)
+cap.set(4,360)
 
-# while True:
-#     ret, frame = cap.read()    
-#     cv2.imshow('video', ret)
-#     if cv2.waitKey(1) & 0xff == ord('q'):
-#         break
-# cv2.destroyAllWindows()
+while True:
+    ret, frame = cap.read()    
+    cv2.imshow('video', frame)
+    if cv2.waitKey(1) & 0xff == ord('q'):
+        break
+cv2.destroyAllWindows()
