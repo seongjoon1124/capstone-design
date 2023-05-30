@@ -5,6 +5,8 @@ import time
 import math
 import dcmotor as motor
 import ultrasonic as us
+import raspi2arduino_tcp as tcp
+import socket
 
 
 #차선인식 함수(영상을 흑백전환, canny, houghLine 과정을 거쳐 변환)
@@ -61,56 +63,133 @@ def DetectLane(frame):
     mimg = cv2.addWeighted(frame, 1, mask_canny, 1, 0)  #카메라 영상에 가중치 부여하여 선명도 높임
     return mimg, degree_Left, degree_Right  #return 값으로 영상, 좌,우 인식한 차선에 선 생성
 
-cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)  #카메라 송출 시작
-print("1")
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    frame = cv2.flip(frame, -1)
-    dist = us.distance()
-    if ret:
-        frame = cv2.resize(frame, (640,360))
-        cv2.imshow('ImageWindow', DetectLane(frame)[0])
-        left, right = DetectLane(frame)[1], DetectLane(frame)[2]    #왼쪽, 오른쪽 차선의 객체 생성
+def automatic():
+    cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)  #카메라 송출 시작
+    print("1")
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        frame = cv2.flip(frame, -1)
+        dist = us.distance()
+        print("2")
+        if ret:
+            frame = cv2.resize(frame, (640,360))
+            cv2.imshow('ImageWindow', DetectLane(frame)[0])
+            left, right = DetectLane(frame)[1], DetectLane(frame)[2]    #왼쪽, 오른쪽 차선의 객체 생성
 
-        if dist > 7:
-            print("dist = %.1f" % dist)
-            if abs(left) <= 155 or abs(right) <= 155:   #절댓값으로 카메라의 왼쪽, 오른쪽에서의 차선을 생성하기 위함
-                if left == 0 or right == 0:
-                    if left < 0 or right < 0:
-                        motor.TurnLeft()
-                        print('left')
-                    elif left > 0 or right > 0:
+            if dist > 7:
+                print("dist = %.1f" % dist)
+                if abs(left) <= 155 or abs(right) <= 155:   #절댓값으로 카메라의 왼쪽, 오른쪽에서의 차선을 생성하기 위함
+                    if left == 0 or right == 0:
+                        if left < 0 or right < 0:
+                            motor.TurnLeft()
+                            print('left')
+                        elif left > 0 or right > 0:
+                            motor.TurnRight()
+                            print('right')
+                    elif abs(left - 15) > abs(right):
                         motor.TurnRight()
                         print('right')
-                elif abs(left - 15) > abs(right):
-                    motor.TurnRight()
-                    print('right')
-                elif abs(right + 15) > abs(left):
-                    motor.TurnLeft()
-                    print('left')
+                    elif abs(right + 15) > abs(left):
+                        motor.TurnLeft()
+                        print('left')
+                    else:
+                        motor.Forward(30)
+                        print('go')
+                #만약 카메라에 인식된 차선에 비해 모터가 덜 꺾일때 가정하여 핸들을 더 왼쪽으로 꺾어 죄회전 하는 상황
+                #작동시켰을 때 필요 없으면 지워도 상관 없음
                 else:
-                    motor.Forward(30)
-                    print('go')
-            #만약 카메라에 인식된 차선에 비해 모터가 덜 꺾일때 가정하여 핸들을 더 왼쪽으로 꺾어 죄회전 하는 상황
-            #작동시켰을 때 필요 없으면 지워도 상관 없음
-            else:
-                if left > 155 or right > 155:
-                    motor.TurnHardRight
-                    print('more left')
-                elif left < -155 or right < -155:
-                    motor.TurnHardLeft
-                    print('more right')
+                    if left > 155 or right > 155:
+                        motor.TurnHardRight
+                        print('more left')
+                    elif left < -155 or right < -155:
+                        motor.TurnHardLeft
+                        print('more right')
+            elif dist <= 7:
+                motor.Stop()
+                print("dist = %.1f" % dist)
 
-        elif dist <= 7:
-            motor.Stop()
-            print("dist = %.1f" % dist)
+            key = cv2.waitKey(1)
+            if key & 0xFF == ord('q'):
+                break
+                cv2.destroyAllWindows()
+                motor.pwm1.stop()
+                motor.pwm2.stop()
+                motor.GPIO.cleanup()
+                sys.exit()
 
-        key = cv2.waitKey(1)
-        if key & 0xFF == ord('q'):
-            break
-            cv2.destroyAllWindows()
-            motor.pwm1.stop()
-            motor.pwm2.stop()
-            motor.GPIO.cleanup()
-            sys.exit()
+
+#connect socket tcp/ip
+s_ip = ("192.168.0.2", 5555)   #s_ip(ip, port), ip -> striong, port -> int
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#s.close()
+s.bind(s_ip)
+s.listen(1)
+print('scoket created : ', s_ip)
+        
+while True:
+    print("wait...")
+    conn, addr = s.accept()
+    print("connected by ", addr)    #print to client ip & port
+    data = conn.recv(1024)  
+    data = data.decode("utf8").strip()  #data -> receive from client
+    if data == "auto":
+        print("start auto")
+        automatic()
+    elif data =="manual":
+        print("start manual")
+        while data != "auto":
+            conn, addr = s.accept()
+            data = conn.recv(1024)  
+            data = data.decode("utf8").strip()  #data -> receive from client
+            if data == "up":
+                while data != "stop":
+                    motor.Forward(12)
+                    print("go")
+                    if data == "stop":
+                        motor.Stop()
+                        break
+            elif data == "down":
+                while data != "stop":
+                    motor.Back(12)
+                    print("Back")
+                    if data == "stop":
+                        motor.Stop()
+                        break
+            elif data == "left":
+                while data != "stop":
+                    motor.TurnLeft()
+                    print("Left")
+                    if data == "stop":
+                        motor.Stop()
+                        break
+            elif data == "right": 
+                while data != "stop":
+                    motor.TurnRight(12)
+                    print("Right")
+                    if data == "stop":
+                        motor.Stop()
+                        break
+            if data == "auto" or "stop":
+                print(data)
+                break
+            data = ""
+    elif data == "stop":
+        motor.Stop()
+        break
+    #수동 조작이 아닌데 방향키가 입력되었을 때 수동 조작 버튼 먼저 누르도록 유도
+    elif data == "up" or "down" or "left" or "right":  
+        print("Manual first")
+    else: 
+        print("does not command")
+    
+    data = ""
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):
+        break
+        conn.close()
+        s.close()
+conn.close()
+s.close()   
+

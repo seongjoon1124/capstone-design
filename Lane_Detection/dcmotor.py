@@ -27,7 +27,6 @@ GPIO.setup(DCpin1, GPIO.OUT)
 GPIO.setup(DCpin2, GPIO.OUT)
 GPIO.setup(DCpin3, GPIO.OUT)
 GPIO.setup(DCpin4, GPIO.OUT)
-
 #서보모터 속도 제어
 pwm1 = GPIO.PWM(ENA, 100)
 pwm2 = GPIO.PWM(ENB, 100)
@@ -68,16 +67,17 @@ def Stop():
 
 #좌회전, 우회전 코딩 해야됨
 def TurnLeft():
-    pwm1.ChangeDutyCycle(36)
-    pwm2.ChangeDutyCycle(7)
-    GPIO.output(DCpin1, HIGH)   
-    GPIO.output(DCpin2, LOW)
-    GPIO.output(DCpin3, LOW)
-    GPIO.output(DCpin4, HIGH)
+    pwm1.ChangeDutyCycle(5)
+    pwm2.ChangeDutyCycle(37)
+    GPIO.output(DCpin1, GPIO.HIGH)   
+    GPIO.output(DCpin2, GPIO.LOW)
+    GPIO.output(DCpin3, GPIO.LOW)
+    GPIO.output(DCpin4, GPIO.HIGH)
+    print(1)
     
 def TurnRight():
-    pwm1.ChangeDutyCycle(7)
-    pwm2.ChangeDutyCycle(36)
+    pwm1.ChangeDutyCycle(37)
+    pwm2.ChangeDutyCycle(5)
     GPIO.output(DCpin1, HIGH)   
     GPIO.output(DCpin2, LOW)
     GPIO.output(DCpin3, LOW)
@@ -99,6 +99,8 @@ def TurnHardRight():
     GPIO.output(DCpin3, LOW)
     GPIO.output(DCpin4, HIGH)
 
+while True:
+    Stop()
 
 # if __name__ == '__main__':
 #     try:
